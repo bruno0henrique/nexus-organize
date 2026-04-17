@@ -21,15 +21,15 @@ export function InputBar({ onAddIdea }: InputBarProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+    <form onSubmit={handleSubmit} className="flex items-center gap-3">
       {/* Central toggle */}
       <button
         type="button"
         onClick={() => setIsCentral(v => !v)}
         className="flex-shrink-0 flex items-center justify-center rounded-xl transition-all"
         style={{
-          width: 42,
-          height: 42,
+          width: 52,
+          height: 52,
           background: isCentral
             ? 'linear-gradient(135deg, #d97706, #b45309)'
             : 'rgba(255,255,255,0.05)',
@@ -39,7 +39,7 @@ export function InputBar({ onAddIdea }: InputBarProps) {
         }}
         title="Marcar como ideia central"
       >
-        <Star size={16} fill={isCentral ? 'currentColor' : 'none'} />
+        <Star size={24} fill={isCentral ? 'currentColor' : 'none'} />
       </button>
 
       {/* Text input */}
@@ -49,7 +49,7 @@ export function InputBar({ onAddIdea }: InputBarProps) {
         value={input}
         onChange={e => setInput(e.target.value)}
         placeholder="Nova ideia... pressione Enter para adicionar"
-        className="flex-1 px-4 py-2.5 text-sm outline-none rounded-xl"
+        className="flex-1 px-6 py-4 text-base outline-none rounded-xl"
         style={{
           background: 'rgba(255,255,255,0.05)',
           border: '1px solid rgba(255,255,255,0.08)',
@@ -63,7 +63,7 @@ export function InputBar({ onAddIdea }: InputBarProps) {
       {/* Submit */}
       <button
         type="submit"
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex-shrink-0"
+        className="flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold transition-all flex-shrink-0"
         style={{
           background: input.trim()
             ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
@@ -73,7 +73,7 @@ export function InputBar({ onAddIdea }: InputBarProps) {
           border: '1px solid rgba(255,255,255,0.08)'
         }}
       >
-        <Plus size={16} />
+        <Plus size={20} />
         Adicionar
       </button>
     </form>

@@ -166,10 +166,10 @@ export function IdeaBalloon({
       >
         {/* Category label */}
         <div
-          className="absolute flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
+          className="absolute flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold tracking-wide"
           style={{
-            top: -10,
-            left: 12,
+            top: -14,
+            left: 16,
             background: color,
             color: 'white',
             boxShadow: `0 2px 8px ${color}60`
@@ -183,27 +183,27 @@ export function IdeaBalloon({
           <div
             className="absolute flex items-center justify-center rounded-full"
             style={{
-              top: -10,
-              right: 12,
-              width: 22,
-              height: 22,
+              top: -14,
+              right: 16,
+              width: 28,
+              height: 28,
               background: 'linear-gradient(135deg, #f59e0b, #d97706)',
               boxShadow: '0 2px 8px rgba(245,158,11,0.5)'
             }}
           >
-            <Star size={11} fill="white" className="text-white" />
+            <Star size={14} fill="white" className="text-white" />
           </div>
         )}
 
         {/* Connection count badge */}
         {idea.connections.length > 0 && (
           <div
-            className="absolute flex items-center justify-center rounded-full text-[10px] font-bold"
+            className="absolute flex items-center justify-center rounded-full text-xs font-bold"
             style={{
-              bottom: -9,
-              right: 12,
-              width: 20,
-              height: 20,
+              bottom: -13,
+              right: 16,
+              width: 26,
+              height: 26,
               background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
               color: 'white',
               boxShadow: '0 2px 8px rgba(124,58,237,0.5)',
@@ -215,30 +215,30 @@ export function IdeaBalloon({
         )}
 
         {/* Content */}
-        <div className="px-4 pt-5 pb-3">
+        <div className="px-6 pt-7 pb-5">
           <p
-            className="text-sm leading-relaxed"
+            className="text-[17px] leading-relaxed font-medium"
             style={{
               color: '#e2e8f0',
               wordBreak: 'break-word',
               whiteSpace: 'pre-wrap',
-              lineHeight: 1.55
+              lineHeight: 1.6
             }}
           >
             {idea.text}
           </p>
 
           {idea.aiGenerated && (
-            <div className="flex items-center gap-1 mt-2">
-              <Sparkles size={9} style={{ color: '#a855f7' }} />
-              <span className="text-[9px] font-semibold" style={{ color: '#a855f7' }}>IA</span>
+            <div className="flex items-center gap-1.5 mt-3">
+              <Sparkles size={13} style={{ color: '#a855f7' }} />
+              <span className="text-[11px] font-bold" style={{ color: '#a855f7' }}>GERADO POR IA</span>
             </div>
           )}
         </div>
 
         {/* Action toolbar — always rendered but opacity toggles */}
         <div
-          className="flex items-center gap-0.5 px-2 pb-2 transition-all duration-150"
+          className="flex items-center gap-1.5 px-4 pb-4 transition-all duration-150"
           style={{ opacity: isHovered || isConnecting ? 1 : 0 }}
         >
           {/* Connect port */}
@@ -250,15 +250,15 @@ export function IdeaBalloon({
             }}
             className="flex items-center justify-center rounded-lg transition-all"
             style={{
-              width: 26,
-              height: 26,
+              width: 32,
+              height: 32,
               background: isConnecting ? '#7c3aed' : 'rgba(255,255,255,0.05)',
               color: isConnecting ? 'white' : '#64748b',
               border: isConnecting ? '1px solid #9333ea' : '1px solid rgba(255,255,255,0.08)'
             }}
             title={isConnecting ? 'Cancelar conexão' : 'Conectar a outro balão'}
           >
-            <Link2 size={12} />
+            <Link2 size={16} />
           </button>
 
           {/* Star toggle */}
@@ -266,15 +266,15 @@ export function IdeaBalloon({
             onClick={e => { e.stopPropagation(); onToggleCentral(idea.id); }}
             className="flex items-center justify-center rounded-lg transition-all"
             style={{
-              width: 26,
-              height: 26,
+              width: 32,
+              height: 32,
               background: idea.isCentral ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
               color: idea.isCentral ? '#f59e0b' : '#64748b',
               border: '1px solid rgba(255,255,255,0.08)'
             }}
             title="Central"
           >
-            <Star size={12} fill={idea.isCentral ? 'currentColor' : 'none'} />
+            <Star size={16} fill={idea.isCentral ? 'currentColor' : 'none'} />
           </button>
 
           {/* AI actions */}
@@ -284,37 +284,37 @@ export function IdeaBalloon({
               disabled={isAiProcessing}
               className="flex items-center justify-center rounded-lg transition-all"
               style={{
-                width: 26,
-                height: 26,
+                width: 32,
+                height: 32,
                 background: showAiMenu ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.05)',
                 color: isAiProcessing ? '#7c3aed' : showAiMenu ? '#c4b5fd' : '#64748b',
                 border: showAiMenu ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(255,255,255,0.08)'
               }}
               title="Ações de IA"
             >
-              {isAiProcessing ? <Loader2 size={12} className="animate-spin" /> : <Brain size={12} />}
+              {isAiProcessing ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
             </button>
 
             {showAiMenu && !isAiProcessing && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowAiMenu(false)} />
                 <div
-                  className="absolute z-50 rounded-xl overflow-hidden shadow-2xl"
+                  className="absolute z-50 rounded-2xl overflow-hidden shadow-2xl"
                   style={{
                     bottom: '100%',
                     left: 0,
-                    marginBottom: 6,
-                    minWidth: 210,
+                    marginBottom: 8,
+                    minWidth: 260,
                     background: 'linear-gradient(145deg, #141e30, #0d1520)',
                     border: '1px solid rgba(139,92,246,0.3)',
                     boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)'
                   }}
                 >
-                  <div className="px-3 py-2 border-b flex items-center gap-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <div className="p-1 rounded-md" style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
-                      <Brain size={11} className="text-white" />
+                  <div className="px-4 py-3 border-b flex items-center gap-3" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <div className="p-1.5 rounded-lg" style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
+                      <Brain size={16} className="text-white" />
                     </div>
-                    <span className="text-[10px] font-bold tracking-widest" style={{ color: '#94a3b8' }}>AÇÕES DE IA</span>
+                    <span className="text-xs font-bold tracking-widest" style={{ color: '#94a3b8' }}>AÇÕES DE IA</span>
                   </div>
                   {AI_ACTIONS.map(act => {
                     const Icon = act.icon;
@@ -322,15 +322,15 @@ export function IdeaBalloon({
                       <button
                         key={act.key}
                         onClick={e => { e.stopPropagation(); setShowAiMenu(false); onAiAction(idea.id, act.key); }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all"
+                        className="w-full flex items-center gap-4 px-4 py-3 text-left transition-all"
                         style={{ color: '#cbd5e1' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
-                        <div className="flex items-center justify-center rounded-lg shrink-0" style={{ width: 26, height: 26, background: act.bg }}>
-                          <Icon size={13} style={{ color: act.color }} />
+                        <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 36, height: 36, background: act.bg }}>
+                          <Icon size={18} style={{ color: act.color }} />
                         </div>
-                        <span className="text-xs font-medium">{act.label}</span>
+                        <span className="text-sm font-medium">{act.label}</span>
                       </button>
                     );
                   })}
@@ -345,46 +345,46 @@ export function IdeaBalloon({
               onClick={e => { e.stopPropagation(); setShowCatMenu(v => !v); setShowAiMenu(false); }}
               className="flex items-center justify-center rounded-lg transition-all"
               style={{
-                width: 26,
-                height: 26,
+                width: 32,
+                height: 32,
                 background: 'rgba(255,255,255,0.05)',
                 color: '#64748b',
                 border: '1px solid rgba(255,255,255,0.08)'
               }}
               title="Mudar categoria"
             >
-              <MoreHorizontal size={12} />
+              <MoreHorizontal size={16} />
             </button>
 
             {showCatMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowCatMenu(false)} />
                 <div
-                  className="absolute z-50 rounded-xl overflow-hidden shadow-2xl"
+                  className="absolute z-50 rounded-2xl overflow-hidden shadow-2xl"
                   style={{
                     bottom: '100%',
                     left: 0,
-                    marginBottom: 6,
-                    minWidth: 160,
+                    marginBottom: 8,
+                    minWidth: 200,
                     background: 'linear-gradient(145deg, #141e30, #0d1520)',
                     border: '1px solid rgba(255,255,255,0.08)',
                     boxShadow: '0 16px 48px rgba(0,0,0,0.6)'
                   }}
                 >
-                  <div className="px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <span className="text-[10px] font-bold tracking-widest" style={{ color: '#64748b' }}>CATEGORIA</span>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <span className="text-[11px] font-bold tracking-widest" style={{ color: '#64748b' }}>CATEGORIA</span>
                   </div>
                   {categories.map(cat => (
                     <button
                       key={cat.name}
                       onClick={e => { e.stopPropagation(); onUpdateCategory(idea.id, cat.name); setShowCatMenu(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all"
                       style={{ color: '#94a3b8' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <div className="size-2.5 rounded-full shrink-0" style={{ background: cat.color }} />
-                      <span className="text-xs">{cat.name}</span>
+                      <div className="size-3 rounded-full shrink-0" style={{ background: cat.color }} />
+                      <span className="text-sm font-medium">{cat.name}</span>
                     </button>
                   ))}
                 </div>
@@ -397,8 +397,8 @@ export function IdeaBalloon({
             onClick={e => { e.stopPropagation(); onDelete(idea.id); }}
             className="ml-auto flex items-center justify-center rounded-lg transition-all"
             style={{
-              width: 26,
-              height: 26,
+              width: 32,
+              height: 32,
               background: 'rgba(255,255,255,0.05)',
               color: '#64748b',
               border: '1px solid rgba(255,255,255,0.08)'
@@ -407,7 +407,7 @@ export function IdeaBalloon({
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.15)'; (e.currentTarget as HTMLElement).style.color = '#ef4444'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.color = '#64748b'; }}
           >
-            <Trash2 size={12} />
+            <Trash2 size={16} />
           </button>
         </div>
       </div>

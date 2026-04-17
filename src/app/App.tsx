@@ -190,18 +190,33 @@ export default function App() {
   // ── Idea actions ──
   const addIdea = useCallback((text: string, isCentral = false) => {
     if (!text.trim()) return;
+    
+    // Fallbacks if not computed
+    let cx = 600, cy = 400;
+    
+    // Spawning exactly in the center of the viewport (accounting for zoom and pan)
+    // 320 is sidebar width, 72 is top bar height
+    const viewW = window.innerWidth - 320;
+    const viewH = window.innerHeight - 72;
+    cx = (viewW / 2 - panX) / zoom;
+    cy = (viewH / 2 - panY) / zoom;
+    
+    const spread = 200;
     const newIdea: Idea = {
       id: Date.now().toString(),
       text,
       category: categorizeIdea(text),
-      position: { x: 300 + Math.random() * 500, y: 200 + Math.random() * 400 },
+      position: {
+        x: cx - 180 + (Math.random() - 0.5) * spread,
+        y: cy - 70 + (Math.random() - 0.5) * spread
+      },
       connections: [],
       isCentral,
       scale: 1,
       projectId: activeProjectId
     };
     setIdeas(prev => [...prev, newIdea]);
-  }, [activeProjectId]);
+  }, [activeProjectId, panX, panY, zoom]);
 
   const updateIdeaPosition = useCallback((id: string, position: { x: number; y: number }) => {
     setIdeas(prev => prev.map(i => i.id === id ? { ...i, position } : i));
@@ -374,33 +389,33 @@ export default function App() {
       <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
         {/* Top bar */}
         <div
-          className="flex-none flex items-center justify-between px-5 py-3"
+          className="flex-none flex items-center justify-between px-8 py-4 z-10 relative"
           style={{
             background: 'rgba(8,12,20,0.8)',
             borderBottom: '1px solid rgba(255,255,255,0.05)',
             backdropFilter: 'blur(12px)',
-            height: 56
+            height: 72
           }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <span
-              className="text-sm font-semibold"
+              className="text-lg font-semibold"
               style={{ color: projects.find(p => p.id === activeProjectId)?.color || '#6366f1' }}
             >
               {projects.find(p => p.id === activeProjectId)?.name || 'Projeto'}
             </span>
-            <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', color: '#475569' }}>
+            <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(255,255,255,0.06)', color: '#64748b' }}>
               {projectIdeas.length} balões
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px]" style={{ color: '#334155' }}>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium" style={{ color: '#475569' }}>
               Scroll → pan · Ctrl+Scroll → zoom · Clique na borda → conectar
             </span>
             <button
               onClick={clearAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all font-medium"
               style={{
                 background: 'rgba(239,68,68,0.08)',
                 border: '1px solid rgba(239,68,68,0.2)',
@@ -409,8 +424,8 @@ export default function App() {
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.15)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
             >
-              <Trash2 size={13} />
-              Limpar
+              <Trash2 size={16} />
+              Limpar Workspace
             </button>
           </div>
         </div>

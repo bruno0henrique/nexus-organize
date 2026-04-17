@@ -31,8 +31,8 @@ export function resetAnimatedConnections() {
 }
 
 // Fixed balloon dimensions (no dynamic scaling per balloon anymore — cleaner)
-const BALLOON_W = 220;
-const BALLOON_H = 90; // minimum height; text will grow it
+const BALLOON_W = 360;
+const BALLOON_H = 140; // minimum height; text will grow it
 
 export function BrainstormBoard({
   ideas,
@@ -250,8 +250,8 @@ export function BrainstormBoard({
     ));
 
   // Grid dots offset by pan
-  const gridDotX = ((panX % 40) + 40) % 40;
-  const gridDotY = ((panY % 40) + 40) % 40;
+  const gridDotX = ((panX % 32) + 32) % 32;
+  const gridDotY = ((panY % 32) + 32) % 32;
 
   return (
     <div
@@ -263,8 +263,8 @@ export function BrainstormBoard({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle, rgba(99,102,241,0.25) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
+          backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.06) 2px, transparent 2px)`,
+          backgroundSize: '32px 32px',
           backgroundPosition: `${gridDotX}px ${gridDotY}px`
         }}
       />
@@ -278,8 +278,16 @@ export function BrainstormBoard({
 
       {/* Transformable world */}
       <div
-        className="absolute inset-0"
-        style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+          transformOrigin: '0 0',
+          willChange: 'transform'
+        }}
       >
         {/* SVG connections layer */}
         <svg
@@ -337,11 +345,11 @@ export function BrainstormBoard({
       {ideas.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
-            <div className="text-7xl mb-5 select-none" style={{ filter: 'drop-shadow(0 0 24px rgba(139,92,246,0.4))' }}>🧠</div>
-            <h2 className="text-lg font-semibold mb-1.5" style={{ color: '#94a3b8' }}>
+            <div className="text-[120px] leading-none mb-8 select-none" style={{ filter: 'drop-shadow(0 0 48px rgba(139,92,246,0.3))' }}>🧠</div>
+            <h2 className="text-2xl font-bold mb-3 tracking-tight" style={{ color: '#94a3b8' }}>
               Workspace em branco
             </h2>
-            <p className="text-sm" style={{ color: '#475569' }}>
+            <p className="text-base font-medium" style={{ color: '#475569' }}>
               Digite uma ideia abaixo e pressione Enter
             </p>
           </div>
