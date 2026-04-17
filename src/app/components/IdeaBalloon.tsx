@@ -1,6 +1,19 @@
 import { useRef, useState } from 'react';
 import { useDrag } from 'react-dnd';
-import { Trash2, Link2, MoreVertical, Star, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+  Trash2,
+  Link2,
+  MoreVertical,
+  Star,
+  ZoomIn,
+  ZoomOut,
+  Brain,
+  Search,
+  ArrowRight,
+  Lightbulb,
+  Sparkles,
+  Loader2
+} from 'lucide-react';
 import { Idea } from '../App';
 
 interface IdeaBalloonProps {
@@ -14,7 +27,33 @@ interface IdeaBalloonProps {
   isConnecting: boolean;
   onStartConnecting: (id: string) => void;
   onFinishConnecting: (id: string) => void;
+  onAiAction: (ideaId: string, action: string) => void;
+  isAiProcessing: boolean;
 }
+
+const AI_ACTIONS = [
+  {
+    key: 'root-cause',
+    label: 'Encontrar Causa Raiz',
+    icon: Search,
+    description: 'Analisa a fundo e identifica a causa raiz',
+    gradient: 'from-red-500 to-orange-500'
+  },
+  {
+    key: 'next-steps',
+    label: 'Próximos Passos',
+    icon: ArrowRight,
+    description: 'Sugere ações concretas para avançar',
+    gradient: 'from-blue-500 to-cyan-500'
+  },
+  {
+    key: 'expand',
+    label: 'Expandir Ideia',
+    icon: Lightbulb,
+    description: 'Desdobra e aprofunda o conceito',
+    gradient: 'from-purple-500 to-pink-500'
+  }
+];
 
 export function IdeaBalloon({
   idea,
@@ -26,9 +65,12 @@ export function IdeaBalloon({
   onDelete,
   isConnecting,
   onStartConnecting,
-  onFinishConnecting
+  onFinishConnecting,
+  onAiAction,
+  isAiProcessing
 }: IdeaBalloonProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showAiMenu, setShowAiMenu] = useState(false);
   const [isDraggingConnection, setIsDraggingConnection] = useState(false);
   const balloonRef = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
@@ -78,6 +120,11 @@ export function IdeaBalloon({
     }
   };
 
+  const handleAiAction = (actionKey: string) => {
+    setShowAiMenu(false);
+    onAiAction(idea.id, actionKey);
+  };
+
   const balloonWidth = 200 * (idea.scale || 1);
   const balloonHeight = 80 * (idea.scale || 1);
 
@@ -89,12 +136,27 @@ export function IdeaBalloon({
         left: idea.position.x,
         top: idea.position.y,
         opacity: isDragging ? 0.5 : 1,
-        zIndex: isDragging ? 1000 : idea.isCentral ? 100 : 1,
+        zIndex: isDragging ? 1000 : showAiMenu ? 500 : idea.isCentral ? 100 : 1,
         width: balloonWidth,
         minHeight: balloonHeight
       }}
       onMouseUp={handleBorderMouseUp}
     >
+      {/* AI Processing ring animation */}
+      {isAiProcessing && (
+        <div
+          className="absolute inset-0 rounded-2xl"
+          style={{
+            border: `3px solid transparent`,
+            background: `linear-gradient(#1e293b, #1e293b) padding-box, 
+                         conic-gradient(from 0deg, ${borderColor}, #a855f7, #06b6d4, ${borderColor}) border-box`,
+            animation: 'spin 2s linear infinite',
+            transform: 'scale(1.05)',
+            zIndex: -1
+          }}
+        />
+      )}
+
       {/* Outer glow for central ideas */}
       {idea.isCentral && (
         <div
@@ -158,8 +220,19 @@ export function IdeaBalloon({
           {idea.text}
         </p>
 
+        {/* AI Source Badge */}
+        {idea.aiGenerated && (
+          <div className="flex items-center gap-1 mt-1.5">
+            <Sparkles size={10} className="text-purple-400" />
+            <span className="text-[10px] text-purple-400 font-medium">
+              Gerado pela IA
+            </span>
+          </div>
+        )}
+
         {/* Actions Bar */}
-        <div className="flex items-center gap-2 mt-3 pt-2 border-t border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Connect Button */}
           <button
             onClick={handleConnect}
             className={`p-1.5 rounded-lg transition-colors ${
@@ -167,11 +240,16 @@ export function IdeaBalloon({
                 ? 'bg-purple-600 text-white'
                 : 'hover:bg-slate-700 text-slate-400'
             }`}
-            title={isConnecting ? 'Clique em outro balão para conectar' : 'Conectar com outro balão'}
+            title={
+              isConnecting
+                ? 'Clique em outro balão para conectar'
+                : 'Conectar com outro balão'
+            }
           >
             <Link2 size={14} />
           </button>
 
+          {/* Central Toggle */}
           <button
             onClick={() => onToggleCentral(idea.id)}
             className={`p-1.5 rounded-lg transition-colors ${
@@ -184,6 +262,7 @@ export function IdeaBalloon({
             <Star size={14} fill={idea.isCentral ? 'currentColor' : 'none'} />
           </button>
 
+          {/* Scale Controls */}
           <button
             onClick={() => onUpdateScale(idea.id, (idea.scale || 1) - 0.2)}
             className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"
@@ -191,7 +270,6 @@ export function IdeaBalloon({
           >
             <ZoomOut size={14} />
           </button>
-
           <button
             onClick={() => onUpdateScale(idea.id, (idea.scale || 1) + 0.2)}
             className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"
@@ -200,16 +278,104 @@ export function IdeaBalloon({
             <ZoomIn size={14} />
           </button>
 
+          {/* AI Actions Button */}
           <div className="relative">
             <button
-              onClick={() => setShowMenu(!showMenu)}
+              onClick={() => {
+                setShowAiMenu(!showAiMenu);
+                setShowMenu(false);
+              }}
+              disabled={isAiProcessing}
+              className={`p-1.5 rounded-lg transition-all ${
+                showAiMenu
+                  ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow-lg shadow-purple-500/30'
+                  : isAiProcessing
+                  ? 'bg-purple-900/50 text-purple-300 cursor-wait'
+                  : 'hover:bg-purple-900/50 text-purple-400 hover:text-purple-300'
+              }`}
+              title="Ações de IA"
+            >
+              {isAiProcessing ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Brain size={14} />
+              )}
+            </button>
+
+            {/* AI Actions Menu */}
+            {showAiMenu && !isAiProcessing && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowAiMenu(false)}
+                />
+                <div className="absolute left-0 bottom-full mb-2 z-20 min-w-[220px]">
+                  <div
+                    className="rounded-xl shadow-2xl border border-slate-600/50 overflow-hidden"
+                    style={{
+                      background:
+                        'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                      backdropFilter: 'blur(20px)'
+                    }}
+                  >
+                    {/* Header */}
+                    <div className="px-3 py-2.5 border-b border-slate-700/50">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded-md bg-gradient-to-r from-purple-600 to-cyan-600">
+                          <Brain size={12} className="text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-200 tracking-wide">
+                          AÇÕES DE IA
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="p-1.5">
+                      {AI_ACTIONS.map(action => {
+                        const Icon = action.icon;
+                        return (
+                          <button
+                            key={action.key}
+                            onClick={() => handleAiAction(action.key)}
+                            className="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-slate-700/50 transition-all group/action flex items-start gap-3"
+                          >
+                            <div
+                              className={`p-1.5 rounded-lg bg-gradient-to-r ${action.gradient} mt-0.5 opacity-80 group-hover/action:opacity-100 transition-opacity shrink-0`}
+                            >
+                              <Icon size={13} className="text-white" />
+                            </div>
+                            <div>
+                              <div className="text-slate-200 font-medium text-xs">
+                                {action.label}
+                              </div>
+                              <div className="text-slate-500 text-[10px] mt-0.5 leading-tight">
+                                {action.description}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Category Menu */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowMenu(!showMenu);
+                setShowAiMenu(false);
+              }}
               className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"
               title="Mais opções"
             >
               <MoreVertical size={14} />
             </button>
 
-            {/* Category Menu */}
             {showMenu && (
               <>
                 <div
@@ -241,6 +407,7 @@ export function IdeaBalloon({
             )}
           </div>
 
+          {/* Delete */}
           <button
             onClick={() => onDelete(idea.id)}
             className="ml-auto p-1.5 hover:bg-red-900/50 rounded-lg transition-colors text-red-400"

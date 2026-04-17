@@ -179,3 +179,15 @@
     line-height: 1.5;
   }
 }
+
+/* Neural Synapse Animations */
+@keyframes spin {
+  from { transform: rotate(0deg) scale(1.05); }
+  to { transform: rotate(360deg) scale(1.05); }
+}
+
+@keyframes synapse-pulse {
+  0% { opacity: 0; stroke-width: 1; }
+  30% { opacity: 0.8; stroke-width: 5; }
+  100% { opacity: 0; stroke-width: 1; }
+}
