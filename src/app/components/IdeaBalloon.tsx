@@ -1,23 +1,22 @@
-import { useRef, useState } from 'react';
-import { useDrag } from 'react-dnd';
+import { useRef, useState, useEffect } from 'react';
 import {
   Trash2,
-  Link2,
-  MoreVertical,
-  Star,
-  ZoomIn,
-  ZoomOut,
   Brain,
   Search,
   ArrowRight,
   Lightbulb,
   Sparkles,
-  Loader2
+  Loader2,
+  Link2,
+  Star,
+  MoreHorizontal,
+  X
 } from 'lucide-react';
 import { Idea } from '../App';
 
 interface IdeaBalloonProps {
   idea: Idea;
+  balloonW: number;
   categories: Array<{ name: string; color: string; bgColor: string }>;
   onUpdatePosition: (id: string, position: { x: number; y: number }) => void;
   onUpdateCategory: (id: string, category: string) => void;
@@ -25,6 +24,7 @@ interface IdeaBalloonProps {
   onUpdateScale: (id: string, scale: number) => void;
   onDelete: (id: string) => void;
   isConnecting: boolean;
+  connectingFromAny: boolean;
   onStartConnecting: (id: string) => void;
   onFinishConnecting: (id: string) => void;
   onAiAction: (ideaId: string, action: string) => void;
@@ -32,31 +32,14 @@ interface IdeaBalloonProps {
 }
 
 const AI_ACTIONS = [
-  {
-    key: 'root-cause',
-    label: 'Encontrar Causa Raiz',
-    icon: Search,
-    description: 'Analisa a fundo e identifica a causa raiz',
-    gradient: 'from-red-500 to-orange-500'
-  },
-  {
-    key: 'next-steps',
-    label: 'Próximos Passos',
-    icon: ArrowRight,
-    description: 'Sugere ações concretas para avançar',
-    gradient: 'from-blue-500 to-cyan-500'
-  },
-  {
-    key: 'expand',
-    label: 'Expandir Ideia',
-    icon: Lightbulb,
-    description: 'Desdobra e aprofunda o conceito',
-    gradient: 'from-purple-500 to-pink-500'
-  }
+  { key: 'root-cause', label: 'Encontrar Causa Raiz', icon: Search, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+  { key: 'next-steps', label: 'Próximos Passos', icon: ArrowRight, color: '#06b6d4', bg: 'rgba(6,182,212,0.15)' },
+  { key: 'expand', label: 'Expandir Ideia', icon: Lightbulb, color: '#a855f7', bg: 'rgba(168,85,247,0.15)' }
 ];
 
 export function IdeaBalloon({
   idea,
+  balloonW,
   categories,
   onUpdatePosition,
   onUpdateCategory,
@@ -64,342 +47,344 @@ export function IdeaBalloon({
   onUpdateScale,
   onDelete,
   isConnecting,
+  connectingFromAny,
   onStartConnecting,
   onFinishConnecting,
   onAiAction,
   isAiProcessing
 }: IdeaBalloonProps) {
-  const [showMenu, setShowMenu] = useState(false);
   const [showAiMenu, setShowAiMenu] = useState(false);
-  const [isDraggingConnection, setIsDraggingConnection] = useState(false);
-  const balloonRef = useRef<HTMLDivElement>(null);
-  const borderRef = useRef<HTMLDivElement>(null);
-
-  const [{ isDragging }, drag] = useDrag({
-    type: 'IDEA',
-    item: { id: idea.id, position: idea.position },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging()
-    }),
-    end: (item, monitor) => {
-      const delta = monitor.getDifferenceFromInitialOffset();
-      if (delta) {
-        const newPosition = {
-          x: Math.max(0, item.position.x + delta.x),
-          y: Math.max(0, item.position.y + delta.y)
-        };
-        onUpdatePosition(item.id, newPosition);
-      }
-    }
-  });
-
-  drag(balloonRef);
+  const [showCatMenu, setShowCatMenu] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   const category = categories.find(c => c.name === idea.category);
-  const borderColor = category?.color || '#6b7280';
+  const color = category?.color || '#6b7280';
 
-  const handleBorderMouseDown = (e: React.MouseEvent) => {
+  // ── Custom drag (not react-dnd, so it works inside the scaled canvas) ──
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragStart.current) return;
+      const dx = (e.clientX - dragStart.current.mx);
+      const dy = (e.clientY - dragStart.current.my);
+      // We move by dx/dy in screen space but positions are in world space,
+      // so the BrainstormBoard passes zoom. We emit world-space positions
+      // by reading the closest ancestor's scale. For simplicity we read
+      // the CSS transform from the parent container.
+      const parent = ref.current?.offsetParent as HTMLElement | null;
+      let scale = 1;
+      if (parent) {
+        const m = new DOMMatrix(window.getComputedStyle(parent).transform);
+        scale = m.a || 1;
+      }
+      onUpdatePosition(idea.id, {
+        x: dragStart.current.px + dx / scale,
+        y: dragStart.current.py + dy / scale
+      });
+    };
+
+    const onUp = () => {
+      if (!dragStart.current) return;
+      dragStart.current = null;
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [idea.id, onUpdatePosition]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Don't start drag when clicking buttons
+    if ((e.target as HTMLElement).closest('button')) return;
     e.stopPropagation();
-    setIsDraggingConnection(true);
-    onStartConnecting(idea.id);
+    e.preventDefault();
+    setIsDragging(true);
+    dragStart.current = { mx: e.clientX, my: e.clientY, px: idea.position.x, py: idea.position.y };
   };
 
-  const handleBorderMouseUp = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isDraggingConnection) {
-      setIsDraggingConnection(false);
-    }
-    onFinishConnecting(idea.id);
-  };
-
-  const handleConnect = () => {
-    if (isConnecting) {
+  const handleBalloonClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    // If something is connecting and it's not us, finish the connection
+    if (connectingFromAny && !isConnecting) {
       onFinishConnecting(idea.id);
-    } else {
-      onStartConnecting(idea.id);
     }
   };
-
-  const handleAiAction = (actionKey: string) => {
-    setShowAiMenu(false);
-    onAiAction(idea.id, actionKey);
-  };
-
-  const balloonWidth = 200 * (idea.scale || 1);
-  const balloonHeight = 80 * (idea.scale || 1);
 
   return (
     <div
-      ref={balloonRef}
-      className="absolute cursor-move group"
+      ref={ref}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => { setIsHovered(false); setShowAiMenu(false); setShowCatMenu(false); }}
+      onMouseDown={handleMouseDown}
+      onClick={handleBalloonClick}
+      className="absolute group"
       style={{
         left: idea.position.x,
         top: idea.position.y,
-        opacity: isDragging ? 0.5 : 1,
-        zIndex: isDragging ? 1000 : showAiMenu ? 500 : idea.isCentral ? 100 : 1,
-        width: balloonWidth,
-        minHeight: balloonHeight
+        width: balloonW,
+        cursor: isDragging ? 'grabbing' : connectingFromAny && !isConnecting ? 'crosshair' : 'grab',
+        zIndex: isDragging ? 1000 : showAiMenu || showCatMenu ? 500 : isConnecting ? 300 : 1,
+        userSelect: 'none',
+        opacity: isDragging ? 0.85 : 1
       }}
-      onMouseUp={handleBorderMouseUp}
     >
-      {/* AI Processing ring animation */}
+      {/* AI processing ring */}
       {isAiProcessing && (
         <div
-          className="absolute inset-0 rounded-2xl"
+          className="absolute rounded-2xl"
           style={{
-            border: `3px solid transparent`,
-            background: `linear-gradient(#1e293b, #1e293b) padding-box, 
-                         conic-gradient(from 0deg, ${borderColor}, #a855f7, #06b6d4, ${borderColor}) border-box`,
-            animation: 'spin 2s linear infinite',
-            transform: 'scale(1.05)',
+            inset: -3,
+            background: `conic-gradient(from 0deg, ${color}, #a855f7, #06b6d4, ${color})`,
+            animation: 'spin 1.8s linear infinite',
+            borderRadius: 20,
             zIndex: -1
           }}
         />
       )}
 
-      {/* Outer glow for central ideas */}
-      {idea.isCentral && (
-        <div
-          className="absolute inset-0 rounded-2xl blur-xl opacity-50"
-          style={{
-            backgroundColor: borderColor,
-            transform: 'scale(1.1)'
-          }}
-        />
-      )}
-
-      {/* Draggable border for connections */}
+      {/* Card */}
       <div
-        ref={borderRef}
-        onMouseDown={handleBorderMouseDown}
-        className="absolute inset-0 rounded-2xl cursor-crosshair hover:ring-4 hover:ring-purple-500/50 transition-all"
+        className="relative rounded-2xl overflow-visible transition-all duration-200"
         style={{
-          border: `${idea.isCentral ? '4px' : '3px'} solid ${borderColor}`,
-          boxShadow: `0 0 ${idea.isCentral ? '20px' : '10px'} ${borderColor}40`
-        }}
-        title="Arraste da borda para conectar"
-      />
-
-      <div
-        className="relative px-4 py-3 rounded-2xl transition-all duration-200"
-        style={{
-          backgroundColor: '#1e293b',
-          transform: isDragging ? 'scale(1.05)' : 'scale(1)',
-          margin: idea.isCentral ? '4px' : '3px'
+          background: 'linear-gradient(145deg, #131d2e, #0d1520)',
+          border: `2px solid ${isConnecting ? '#a855f7' : color}`,
+          boxShadow: isConnecting
+            ? `0 0 0 3px rgba(168,85,247,0.3), 0 0 20px ${color}30`
+            : idea.isCentral
+            ? `0 0 30px ${color}50, 0 4px 24px rgba(0,0,0,0.5)`
+            : isHovered
+            ? `0 0 16px ${color}25, 0 4px 20px rgba(0,0,0,0.4)`
+            : `0 0 10px ${color}15, 0 2px 12px rgba(0,0,0,0.3)`,
+          transform: isDragging ? 'scale(1.03) rotate(0.5deg)' : 'scale(1)',
         }}
       >
-        {/* Category Badge */}
+        {/* Category label */}
         <div
-          className="absolute -top-2 -left-2 px-2 py-0.5 rounded-full text-xs font-semibold text-white shadow-md"
-          style={{ backgroundColor: borderColor }}
+          className="absolute flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
+          style={{
+            top: -10,
+            left: 12,
+            background: color,
+            color: 'white',
+            boxShadow: `0 2px 8px ${color}60`
+          }}
         >
           {idea.category}
         </div>
 
-        {/* Central Star */}
+        {/* Central star badge */}
         {idea.isCentral && (
-          <div className="absolute -top-3 -right-3 size-8 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg">
-            <Star size={16} fill="currentColor" />
+          <div
+            className="absolute flex items-center justify-center rounded-full"
+            style={{
+              top: -10,
+              right: 12,
+              width: 22,
+              height: 22,
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              boxShadow: '0 2px 8px rgba(245,158,11,0.5)'
+            }}
+          >
+            <Star size={11} fill="white" className="text-white" />
           </div>
         )}
 
-        {/* Connection Count Badge */}
+        {/* Connection count badge */}
         {idea.connections.length > 0 && (
-          <div className="absolute -bottom-2 -right-2 size-7 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md ring-2 ring-purple-400">
+          <div
+            className="absolute flex items-center justify-center rounded-full text-[10px] font-bold"
+            style={{
+              bottom: -9,
+              right: 12,
+              width: 20,
+              height: 20,
+              background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              color: 'white',
+              boxShadow: '0 2px 8px rgba(124,58,237,0.5)',
+              border: '2px solid #131d2e'
+            }}
+          >
             {idea.connections.length}
           </div>
         )}
 
-        {/* Text Content */}
-        <p
-          className="text-sm text-slate-100 pt-2 leading-relaxed"
-          style={{
-            fontSize: `${0.875 * (idea.scale || 1)}rem`
-          }}
+        {/* Content */}
+        <div className="px-4 pt-5 pb-3">
+          <p
+            className="text-sm leading-relaxed"
+            style={{
+              color: '#e2e8f0',
+              wordBreak: 'break-word',
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.55
+            }}
+          >
+            {idea.text}
+          </p>
+
+          {idea.aiGenerated && (
+            <div className="flex items-center gap-1 mt-2">
+              <Sparkles size={9} style={{ color: '#a855f7' }} />
+              <span className="text-[9px] font-semibold" style={{ color: '#a855f7' }}>IA</span>
+            </div>
+          )}
+        </div>
+
+        {/* Action toolbar — always rendered but opacity toggles */}
+        <div
+          className="flex items-center gap-0.5 px-2 pb-2 transition-all duration-150"
+          style={{ opacity: isHovered || isConnecting ? 1 : 0 }}
         >
-          {idea.text}
-        </p>
-
-        {/* AI Source Badge */}
-        {idea.aiGenerated && (
-          <div className="flex items-center gap-1 mt-1.5">
-            <Sparkles size={10} className="text-purple-400" />
-            <span className="text-[10px] text-purple-400 font-medium">
-              Gerado pela IA
-            </span>
-          </div>
-        )}
-
-        {/* Actions Bar */}
-        <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Connect Button */}
+          {/* Connect port */}
           <button
-            onClick={handleConnect}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isConnecting
-                ? 'bg-purple-600 text-white'
-                : 'hover:bg-slate-700 text-slate-400'
-            }`}
-            title={
-              isConnecting
-                ? 'Clique em outro balão para conectar'
-                : 'Conectar com outro balão'
-            }
+            onClick={e => {
+              e.stopPropagation();
+              if (isConnecting) onFinishConnecting(idea.id);
+              else onStartConnecting(idea.id);
+            }}
+            className="flex items-center justify-center rounded-lg transition-all"
+            style={{
+              width: 26,
+              height: 26,
+              background: isConnecting ? '#7c3aed' : 'rgba(255,255,255,0.05)',
+              color: isConnecting ? 'white' : '#64748b',
+              border: isConnecting ? '1px solid #9333ea' : '1px solid rgba(255,255,255,0.08)'
+            }}
+            title={isConnecting ? 'Cancelar conexão' : 'Conectar a outro balão'}
           >
-            <Link2 size={14} />
+            <Link2 size={12} />
           </button>
 
-          {/* Central Toggle */}
+          {/* Star toggle */}
           <button
-            onClick={() => onToggleCentral(idea.id)}
-            className={`p-1.5 rounded-lg transition-colors ${
-              idea.isCentral
-                ? 'bg-amber-600 text-white'
-                : 'hover:bg-slate-700 text-slate-400'
-            }`}
-            title="Marcar como central"
+            onClick={e => { e.stopPropagation(); onToggleCentral(idea.id); }}
+            className="flex items-center justify-center rounded-lg transition-all"
+            style={{
+              width: 26,
+              height: 26,
+              background: idea.isCentral ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
+              color: idea.isCentral ? '#f59e0b' : '#64748b',
+              border: '1px solid rgba(255,255,255,0.08)'
+            }}
+            title="Central"
           >
-            <Star size={14} fill={idea.isCentral ? 'currentColor' : 'none'} />
+            <Star size={12} fill={idea.isCentral ? 'currentColor' : 'none'} />
           </button>
 
-          {/* Scale Controls */}
-          <button
-            onClick={() => onUpdateScale(idea.id, (idea.scale || 1) - 0.2)}
-            className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"
-            title="Diminuir"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            onClick={() => onUpdateScale(idea.id, (idea.scale || 1) + 0.2)}
-            className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"
-            title="Aumentar"
-          >
-            <ZoomIn size={14} />
-          </button>
-
-          {/* AI Actions Button */}
+          {/* AI actions */}
           <div className="relative">
             <button
-              onClick={() => {
-                setShowAiMenu(!showAiMenu);
-                setShowMenu(false);
-              }}
+              onClick={e => { e.stopPropagation(); setShowAiMenu(v => !v); setShowCatMenu(false); }}
               disabled={isAiProcessing}
-              className={`p-1.5 rounded-lg transition-all ${
-                showAiMenu
-                  ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow-lg shadow-purple-500/30'
-                  : isAiProcessing
-                  ? 'bg-purple-900/50 text-purple-300 cursor-wait'
-                  : 'hover:bg-purple-900/50 text-purple-400 hover:text-purple-300'
-              }`}
+              className="flex items-center justify-center rounded-lg transition-all"
+              style={{
+                width: 26,
+                height: 26,
+                background: showAiMenu ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.05)',
+                color: isAiProcessing ? '#7c3aed' : showAiMenu ? '#c4b5fd' : '#64748b',
+                border: showAiMenu ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(255,255,255,0.08)'
+              }}
               title="Ações de IA"
             >
-              {isAiProcessing ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Brain size={14} />
-              )}
+              {isAiProcessing ? <Loader2 size={12} className="animate-spin" /> : <Brain size={12} />}
             </button>
 
-            {/* AI Actions Menu */}
             {showAiMenu && !isAiProcessing && (
               <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowAiMenu(false)} />
                 <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowAiMenu(false)}
-                />
-                <div className="absolute left-0 bottom-full mb-2 z-20 min-w-[220px]">
-                  <div
-                    className="rounded-xl shadow-2xl border border-slate-600/50 overflow-hidden"
-                    style={{
-                      background:
-                        'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                      backdropFilter: 'blur(20px)'
-                    }}
-                  >
-                    {/* Header */}
-                    <div className="px-3 py-2.5 border-b border-slate-700/50">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-gradient-to-r from-purple-600 to-cyan-600">
-                          <Brain size={12} className="text-white" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-200 tracking-wide">
-                          AÇÕES DE IA
-                        </span>
-                      </div>
+                  className="absolute z-50 rounded-xl overflow-hidden shadow-2xl"
+                  style={{
+                    bottom: '100%',
+                    left: 0,
+                    marginBottom: 6,
+                    minWidth: 210,
+                    background: 'linear-gradient(145deg, #141e30, #0d1520)',
+                    border: '1px solid rgba(139,92,246,0.3)',
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)'
+                  }}
+                >
+                  <div className="px-3 py-2 border-b flex items-center gap-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <div className="p-1 rounded-md" style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
+                      <Brain size={11} className="text-white" />
                     </div>
-
-                    {/* Actions */}
-                    <div className="p-1.5">
-                      {AI_ACTIONS.map(action => {
-                        const Icon = action.icon;
-                        return (
-                          <button
-                            key={action.key}
-                            onClick={() => handleAiAction(action.key)}
-                            className="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-slate-700/50 transition-all group/action flex items-start gap-3"
-                          >
-                            <div
-                              className={`p-1.5 rounded-lg bg-gradient-to-r ${action.gradient} mt-0.5 opacity-80 group-hover/action:opacity-100 transition-opacity shrink-0`}
-                            >
-                              <Icon size={13} className="text-white" />
-                            </div>
-                            <div>
-                              <div className="text-slate-200 font-medium text-xs">
-                                {action.label}
-                              </div>
-                              <div className="text-slate-500 text-[10px] mt-0.5 leading-tight">
-                                {action.description}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <span className="text-[10px] font-bold tracking-widest" style={{ color: '#94a3b8' }}>AÇÕES DE IA</span>
                   </div>
+                  {AI_ACTIONS.map(act => {
+                    const Icon = act.icon;
+                    return (
+                      <button
+                        key={act.key}
+                        onClick={e => { e.stopPropagation(); setShowAiMenu(false); onAiAction(idea.id, act.key); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all"
+                        style={{ color: '#cbd5e1' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <div className="flex items-center justify-center rounded-lg shrink-0" style={{ width: 26, height: 26, background: act.bg }}>
+                          <Icon size={13} style={{ color: act.color }} />
+                        </div>
+                        <span className="text-xs font-medium">{act.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
           </div>
 
-          {/* Category Menu */}
+          {/* Category change */}
           <div className="relative">
             <button
-              onClick={() => {
-                setShowMenu(!showMenu);
-                setShowAiMenu(false);
+              onClick={e => { e.stopPropagation(); setShowCatMenu(v => !v); setShowAiMenu(false); }}
+              className="flex items-center justify-center rounded-lg transition-all"
+              style={{
+                width: 26,
+                height: 26,
+                background: 'rgba(255,255,255,0.05)',
+                color: '#64748b',
+                border: '1px solid rgba(255,255,255,0.08)'
               }}
-              className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"
-              title="Mais opções"
+              title="Mudar categoria"
             >
-              <MoreVertical size={14} />
+              <MoreHorizontal size={12} />
             </button>
 
-            {showMenu && (
+            {showCatMenu && (
               <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowCatMenu(false)} />
                 <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowMenu(false)}
-                />
-                <div className="absolute left-0 bottom-full mb-2 bg-slate-800 rounded-lg shadow-xl border border-slate-700 p-2 z-20 min-w-[150px]">
-                  <div className="text-xs font-semibold text-slate-400 mb-2 px-2">
-                    Mudar categoria:
+                  className="absolute z-50 rounded-xl overflow-hidden shadow-2xl"
+                  style={{
+                    bottom: '100%',
+                    left: 0,
+                    marginBottom: 6,
+                    minWidth: 160,
+                    background: 'linear-gradient(145deg, #141e30, #0d1520)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.6)'
+                  }}
+                >
+                  <div className="px-3 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <span className="text-[10px] font-bold tracking-widest" style={{ color: '#64748b' }}>CATEGORIA</span>
                   </div>
                   {categories.map(cat => (
                     <button
                       key={cat.name}
-                      onClick={() => {
-                        onUpdateCategory(idea.id, cat.name);
-                        setShowMenu(false);
-                      }}
-                      className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-slate-700 transition-colors flex items-center gap-2 text-slate-200"
+                      onClick={e => { e.stopPropagation(); onUpdateCategory(idea.id, cat.name); setShowCatMenu(false); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all"
+                      style={{ color: '#94a3b8' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <div
-                        className="size-3 rounded-full"
-                        style={{ backgroundColor: cat.color }}
-                      />
-                      {cat.name}
+                      <div className="size-2.5 rounded-full shrink-0" style={{ background: cat.color }} />
+                      <span className="text-xs">{cat.name}</span>
                     </button>
                   ))}
                 </div>
@@ -409,28 +394,34 @@ export function IdeaBalloon({
 
           {/* Delete */}
           <button
-            onClick={() => onDelete(idea.id)}
-            className="ml-auto p-1.5 hover:bg-red-900/50 rounded-lg transition-colors text-red-400"
-            title="Deletar"
+            onClick={e => { e.stopPropagation(); onDelete(idea.id); }}
+            className="ml-auto flex items-center justify-center rounded-lg transition-all"
+            style={{
+              width: 26,
+              height: 26,
+              background: 'rgba(255,255,255,0.05)',
+              color: '#64748b',
+              border: '1px solid rgba(255,255,255,0.08)'
+            }}
+            title="Excluir"
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.15)'; (e.currentTarget as HTMLElement).style.color = '#ef4444'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.color = '#64748b'; }}
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
           </button>
         </div>
-
-        {/* Connecting Indicator */}
-        {isConnecting && (
-          <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg animate-pulse whitespace-nowrap">
-            Clique em outro balão
-          </div>
-        )}
-
-        {/* Dragging Connection Indicator */}
-        {isDraggingConnection && (
-          <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg animate-pulse whitespace-nowrap">
-            Solte em outro balão
-          </div>
-        )}
       </div>
+
+      {/* Connection mode: glow ring */}
+      {isConnecting && (
+        <div
+          className="absolute inset-0 rounded-2xl pointer-events-none"
+          style={{
+            boxShadow: `0 0 0 3px rgba(168,85,247,0.8), 0 0 24px rgba(168,85,247,0.4)`,
+            animation: 'pulse 1.5s ease-in-out infinite'
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,9 +1,7 @@
-import { useState, useCallback } from 'react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { BrainstormBoard, resetAnimatedConnections } from './components/BrainstormBoard';
 import { InputBar } from './components/InputBar';
-import { CategoryFilter } from './components/CategoryFilter';
+import { Sidebar, Project } from './components/Sidebar';
 import { Trash2 } from 'lucide-react';
 
 export interface Idea {
@@ -15,6 +13,7 @@ export interface Idea {
   isCentral: boolean;
   scale: number;
   aiGenerated?: boolean;
+  projectId: string;
 }
 
 const CATEGORIES = [
@@ -26,197 +25,220 @@ const CATEGORIES = [
   { name: 'Outro', color: '#6b7280', bgColor: '#f3f4f6' }
 ];
 
+const PROJECT_COLORS = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#06b6d4',
+  '#10b981', '#f59e0b', '#ef4444', '#3b82f6'
+];
+
 function categorizeIdea(text: string): string {
-  const lowerText = text.toLowerCase();
-
-  if (lowerText.includes('problema') || lowerText.includes('desafio') || lowerText.includes('dificuldade') || lowerText.includes('causa')) {
-    return 'Problema';
-  }
-  if (lowerText.includes('solução') || lowerText.includes('resolver') || lowerText.includes('implementar') || lowerText.includes('passo')) {
-    return 'Solução';
-  }
-  if (lowerText.includes('recurso') || lowerText.includes('ferramenta') || lowerText.includes('material')) {
-    return 'Recurso';
-  }
-  if (lowerText.includes('objetivo') || lowerText.includes('meta') || lowerText.includes('alcançar')) {
-    return 'Objetivo';
-  }
-  if (lowerText.includes('risco') || lowerText.includes('ameaça') || lowerText.includes('perigo')) {
-    return 'Risco';
-  }
-
+  const t = text.toLowerCase();
+  if (t.includes('problema') || t.includes('desafio') || t.includes('dificuldade') || t.includes('causa')) return 'Problema';
+  if (t.includes('solução') || t.includes('resolver') || t.includes('implementar') || t.includes('passo')) return 'Solução';
+  if (t.includes('recurso') || t.includes('ferramenta') || t.includes('material')) return 'Recurso';
+  if (t.includes('objetivo') || t.includes('meta') || t.includes('alcançar')) return 'Objetivo';
+  if (t.includes('risco') || t.includes('ameaça') || t.includes('perigo')) return 'Risco';
   return 'Outro';
 }
 
-// ─── AI Creation Engine ────────────────────────────────────────────────
-// Simulated AI responses per action type
+// ─── AI Engine ─────────────────────────────────────────────────────
 const AI_RESPONSES: Record<string, (text: string) => Array<{ text: string; category: string }>> = {
-  'root-cause': (text: string) => {
-    const base = text.toLowerCase();
-    const responses: Array<{ text: string; category: string }> = [];
-
-    if (base.includes('venda') || base.includes('receita') || base.includes('lucro')) {
-      responses.push(
-        { text: `Causa raiz: Falta de segmentação adequada do público-alvo para "${text}"`, category: 'Problema' },
-        { text: `Análise: Processo de conversão com muitos pontos de atrito`, category: 'Problema' },
-        { text: `Investigar: Métricas de funil indicam abandono na etapa de decisão`, category: 'Risco' }
-      );
-    } else if (base.includes('equipe') || base.includes('time') || base.includes('pessoa')) {
-      responses.push(
-        { text: `Causa raiz: Falta de alinhamento entre expectativas e capacidades da equipe`, category: 'Problema' },
-        { text: `Análise: Processos de comunicação ineficientes gerando retrabalho`, category: 'Problema' },
-        { text: `Investigar: Sobrecarga de demandas sem priorização clara`, category: 'Risco' }
-      );
-    } else if (base.includes('tecnolog') || base.includes('sistema') || base.includes('software')) {
-      responses.push(
-        { text: `Causa raiz: Débito técnico acumulado comprometendo a estabilidade`, category: 'Problema' },
-        { text: `Análise: Falta de testes automatizados gerando regressões`, category: 'Problema' },
-        { text: `Investigar: Arquitetura monolítica limitando a escalabilidade`, category: 'Risco' }
-      );
-    } else {
-      responses.push(
-        { text: `Causa raiz identificada: Falta de dados quantitativos sobre "${text}"`, category: 'Problema' },
-        { text: `Análise profunda: Ausência de métricas claras para medir o progresso`, category: 'Problema' },
-        { text: `Investigar: Possível desalinhamento entre stakeholders sobre o tema`, category: 'Risco' }
-      );
-    }
-
-    return responses;
+  'root-cause': text => {
+    const t = text.toLowerCase();
+    if (t.includes('venda') || t.includes('receita') || t.includes('lucro'))
+      return [
+        { text: `Causa raiz: Segmentação inadequada do público-alvo`, category: 'Problema' },
+        { text: `Análise: Processo de conversão com pontos de atrito`, category: 'Problema' },
+        { text: `Risco: Abandono no funil de decisão`, category: 'Risco' }
+      ];
+    if (t.includes('equipe') || t.includes('time') || t.includes('pessoa'))
+      return [
+        { text: `Causa raiz: Desalinhamento entre expectativas e capacidades`, category: 'Problema' },
+        { text: `Análise: Comunicação ineficiente gerando retrabalho`, category: 'Problema' },
+        { text: `Risco: Sobrecarga sem priorização clara`, category: 'Risco' }
+      ];
+    if (t.includes('tecnolog') || t.includes('sistema') || t.includes('software'))
+      return [
+        { text: `Causa raiz: Débito técnico comprometendo estabilidade`, category: 'Problema' },
+        { text: `Análise: Ausência de testes automatizados`, category: 'Problema' },
+        { text: `Risco: Arquitetura limitando escalabilidade`, category: 'Risco' }
+      ];
+    return [
+      { text: `Causa raiz: Falta de dados quantitativos sobre o tema`, category: 'Problema' },
+      { text: `Análise: Ausência de métricas claras de progresso`, category: 'Problema' },
+      { text: `Risco: Desalinhamento entre stakeholders`, category: 'Risco' }
+    ];
   },
-
-  'next-steps': (text: string) => {
-    const base = text.toLowerCase();
-    const responses: Array<{ text: string; category: string }> = [];
-
-    if (base.includes('problema') || base.includes('causa') || base.includes('desafio')) {
-      responses.push(
-        { text: `Passo 1: Mapear todos os stakeholders impactados por "${text}"`, category: 'Solução' },
-        { text: `Passo 2: Definir KPIs mensuráveis para acompanhar a resolução`, category: 'Objetivo' },
-        { text: `Passo 3: Criar um plano de ação com marcos semanais`, category: 'Solução' }
-      );
-    } else if (base.includes('objetivo') || base.includes('meta')) {
-      responses.push(
-        { text: `Passo 1: Quebrar o objetivo em micro-entregas quinzenais`, category: 'Solução' },
-        { text: `Passo 2: Alocar recursos dedicados e definir responsáveis`, category: 'Recurso' },
-        { text: `Passo 3: Implementar revisões semanais de progresso`, category: 'Solução' }
-      );
-    } else {
-      responses.push(
-        { text: `Passo 1: Validar a viabilidade de "${text}" com dados reais`, category: 'Solução' },
-        { text: `Passo 2: Criar protótipo ou MVP para teste rápido`, category: 'Solução' },
-        { text: `Passo 3: Coletar feedback e iterar sobre os resultados`, category: 'Objetivo' }
-      );
-    }
-
-    return responses;
+  'next-steps': text => {
+    const t = text.toLowerCase();
+    if (t.includes('problema') || t.includes('causa') || t.includes('desafio'))
+      return [
+        { text: `Passo 1: Mapear stakeholders impactados`, category: 'Solução' },
+        { text: `Passo 2: Definir KPIs mensuráveis de resolução`, category: 'Objetivo' },
+        { text: `Passo 3: Criar plano de ação com marcos semanais`, category: 'Solução' }
+      ];
+    if (t.includes('objetivo') || t.includes('meta'))
+      return [
+        { text: `Passo 1: Quebrar objetivo em micro-entregas`, category: 'Solução' },
+        { text: `Passo 2: Alocar recursos e definir responsáveis`, category: 'Recurso' },
+        { text: `Passo 3: Revisões semanais de progresso`, category: 'Solução' }
+      ];
+    return [
+      { text: `Passo 1: Validar viabilidade com dados reais`, category: 'Solução' },
+      { text: `Passo 2: Criar MVP para teste rápido`, category: 'Solução' },
+      { text: `Passo 3: Coletar feedback e iterar`, category: 'Objetivo' }
+    ];
   },
-
-  'expand': (text: string) => {
-    const base = text.toLowerCase();
-    const responses: Array<{ text: string; category: string }> = [];
-
-    if (base.includes('produto') || base.includes('feature') || base.includes('funcionalidade')) {
-      responses.push(
-        { text: `Expandindo "${text}": Considerar uma versão mobile-first`, category: 'Solução' },
-        { text: `Ramificação: Integração com APIs de terceiros para enriquecer dados`, category: 'Recurso' },
-        { text: `Oportunidade: Criar um modelo freemium para aquisição orgânica`, category: 'Objetivo' }
-      );
-    } else if (base.includes('mercado') || base.includes('cliente') || base.includes('usuário')) {
-      responses.push(
-        { text: `Expandindo "${text}": Segmentar por comportamento, não só demografia`, category: 'Solução' },
-        { text: `Ramificação: Criar programa de embaixadores e referência`, category: 'Objetivo' },
-        { text: `Oportunidade: Explorar mercados adjacentes com potencial sinérgico`, category: 'Recurso' }
-      );
-    } else {
-      responses.push(
-        { text: `Expandindo "${text}": Analisar o tema sob óptica de diferentes áreas`, category: 'Solução' },
-        { text: `Ramificação: Conectar com tendências de mercado atuais`, category: 'Recurso' },
-        { text: `Oportunidade: Transformar em um diferencial competitivo mensurável`, category: 'Objetivo' }
-      );
-    }
-
-    return responses;
+  'expand': text => {
+    const t = text.toLowerCase();
+    if (t.includes('produto') || t.includes('feature'))
+      return [
+        { text: `Expansão: Versão mobile-first do conceito`, category: 'Solução' },
+        { text: `Ramificação: Integração com APIs de terceiros`, category: 'Recurso' },
+        { text: `Oportunidade: Modelo freemium para aquisição`, category: 'Objetivo' }
+      ];
+    if (t.includes('mercado') || t.includes('cliente'))
+      return [
+        { text: `Expansão: Segmentar por comportamento`, category: 'Solução' },
+        { text: `Ramificação: Programa de embaixadores`, category: 'Objetivo' },
+        { text: `Oportunidade: Mercados adjacentes sinérgicos`, category: 'Recurso' }
+      ];
+    return [
+      { text: `Expansão: Perspectivas de diferentes áreas`, category: 'Solução' },
+      { text: `Ramificação: Conexão com tendências de mercado`, category: 'Recurso' },
+      { text: `Oportunidade: Diferencial competitivo mensurável`, category: 'Objetivo' }
+    ];
   }
 };
 
-function generateAIResponse(
-  ideaText: string,
-  actionKey: string
-): Array<{ text: string; category: string }> {
-  const handler = AI_RESPONSES[actionKey];
-  if (!handler) return [];
-  return handler(ideaText);
-}
-
-// ─── Main App ──────────────────────────────────────────────────────────
 export default function App() {
+  // ── Projects ──
+  const [projects, setProjects] = useState<Project[]>([
+    { id: 'default', name: 'Meu Projeto', color: '#6366f1', createdAt: Date.now() }
+  ]);
+  const [activeProjectId, setActiveProjectId] = useState<string>('default');
+
+  // ── Ideas ──
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // ── Connection ──
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [aiMode, setAiMode] = useState(false);
+  const [connectingLine, setConnectingLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [connectionFlash, setConnectionFlash] = useState<{ from: string; to: string } | null>(null);
+
+  // ── AI ──
+  const [aiMode, setAiMode] = useState(false);
   const [aiProcessingId, setAiProcessingId] = useState<string | null>(null);
 
-  const addIdea = useCallback((text: string, isCentral: boolean = false) => {
-    if (!text.trim()) return;
+  // ── Viewport ──
+  const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
 
-    const category = categorizeIdea(text);
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  // ESC cancels connecting
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConnectingFrom(null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Track mouse for live connection line
+  useEffect(() => {
+    if (!connectingFrom) { setConnectingLine(null); return; }
+    const fromIdea = ideas.find(i => i.id === connectingFrom);
+    if (!fromIdea) return;
+
+    const onMove = (e: MouseEvent) => {
+      const board = boardRef.current;
+      if (!board) return;
+      const rect = board.getBoundingClientRect();
+      // Mouse in world space
+      const mx = (e.clientX - rect.left - panX) / zoom;
+      const my = (e.clientY - rect.top - panY) / zoom;
+      setConnectingLine({
+        x1: fromIdea.position.x + 110,
+        y1: fromIdea.position.y + 45,
+        x2: mx,
+        y2: my
+      });
+    };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, [connectingFrom, ideas, panX, panY, zoom]);
+
+  // ── Project actions ──
+  const addProject = useCallback((name: string) => {
+    const color = PROJECT_COLORS[Math.floor(Math.random() * PROJECT_COLORS.length)];
+    const p: Project = { id: Date.now().toString(), name, color, createdAt: Date.now() };
+    setProjects(prev => [...prev, p]);
+    setActiveProjectId(p.id);
+  }, []);
+
+  const deleteProject = useCallback((id: string) => {
+    if (projects.length === 1) return;
+    setProjects(prev => prev.filter(p => p.id !== id));
+    setIdeas(prev => prev.filter(i => i.projectId !== id));
+    if (activeProjectId === id) {
+      setActiveProjectId(projects.find(p => p.id !== id)?.id || 'default');
+    }
+  }, [projects, activeProjectId]);
+
+  // ── Idea actions ──
+  const addIdea = useCallback((text: string, isCentral = false) => {
+    if (!text.trim()) return;
     const newIdea: Idea = {
       id: Date.now().toString(),
       text,
-      category,
-      position: {
-        x: Math.random() * 600 + 300,
-        y: Math.random() * 400 + 200
-      },
+      category: categorizeIdea(text),
+      position: { x: 300 + Math.random() * 500, y: 200 + Math.random() * 400 },
       connections: [],
       isCentral,
-      scale: isCentral ? 1.5 : 1
+      scale: 1,
+      projectId: activeProjectId
     };
-
     setIdeas(prev => [...prev, newIdea]);
-  }, []);
+  }, [activeProjectId]);
 
   const updateIdeaPosition = useCallback((id: string, position: { x: number; y: number }) => {
-    setIdeas(prev => prev.map(idea =>
-      idea.id === id ? { ...idea, position } : idea
-    ));
+    setIdeas(prev => prev.map(i => i.id === id ? { ...i, position } : i));
   }, []);
 
   const updateIdeaCategory = useCallback((id: string, category: string) => {
-    setIdeas(prev => prev.map(idea =>
-      idea.id === id ? { ...idea, category } : idea
-    ));
+    setIdeas(prev => prev.map(i => i.id === id ? { ...i, category } : i));
   }, []);
 
   const deleteIdea = useCallback((id: string) => {
-    setIdeas(prev => prev.filter(idea => idea.id !== id));
+    setIdeas(prev => prev.filter(i => i.id !== id).map(i => ({
+      ...i,
+      connections: i.connections.filter(c => c !== id)
+    })));
   }, []);
 
-  const triggerConnectionFlash = useCallback((fromId: string, toId: string) => {
+  const toggleCentral = useCallback((id: string) => {
+    setIdeas(prev => prev.map(i => i.id === id ? { ...i, isCentral: !i.isCentral } : i));
+  }, []);
+
+  const updateIdeaScale = useCallback((id: string, scale: number) => {
+    setIdeas(prev => prev.map(i => i.id === id ? { ...i, scale: Math.max(0.5, Math.min(2.5, scale)) } : i));
+  }, []);
+
+  const triggerFlash = useCallback((fromId: string, toId: string) => {
     setConnectionFlash({ from: fromId, to: toId });
-    setTimeout(() => setConnectionFlash(null), 500);
+    setTimeout(() => setConnectionFlash(null), 400);
   }, []);
 
   const toggleConnection = useCallback((fromId: string, toId: string) => {
     setIdeas(prev => prev.map(idea => {
-      if (idea.id === fromId) {
-        const hasConnection = idea.connections.includes(toId);
-        if (!hasConnection) {
-          // Trigger flash effect
-          triggerConnectionFlash(fromId, toId);
-        }
-        return {
-          ...idea,
-          connections: hasConnection
-            ? idea.connections.filter(c => c !== toId)
-            : [...idea.connections, toId]
-        };
-      }
-      return idea;
+      if (idea.id !== fromId) return idea;
+      const has = idea.connections.includes(toId);
+      if (!has) triggerFlash(fromId, toId);
+      return { ...idea, connections: has ? idea.connections.filter(c => c !== toId) : [...idea.connections, toId] };
     }));
-  }, [triggerConnectionFlash]);
+  }, [triggerFlash]);
 
   const startConnecting = useCallback((id: string) => {
     setConnectingFrom(id);
@@ -227,193 +249,174 @@ export default function App() {
       toggleConnection(connectingFrom, toId);
     }
     setConnectingFrom(null);
+    setConnectingLine(null);
   }, [connectingFrom, toggleConnection]);
 
-  const toggleCentral = useCallback((id: string) => {
-    setIdeas(prev => prev.map(idea =>
-      idea.id === id ? { ...idea, isCentral: !idea.isCentral, scale: !idea.isCentral ? 1.5 : 1 } : idea
-    ));
-  }, []);
+  // ── AI Action ──
+  const handleAiAction = useCallback((ideaId: string, actionKey: string) => {
+    const source = ideas.find(i => i.id === ideaId);
+    if (!source) return;
 
-  const updateIdeaScale = useCallback((id: string, scale: number) => {
-    setIdeas(prev => prev.map(idea =>
-      idea.id === id ? { ...idea, scale: Math.max(0.5, Math.min(2.5, scale)) } : idea
-    ));
-  }, []);
+    setAiProcessingId(ideaId);
+    const delay = 1500 + Math.random() * 1200;
 
-  const autoConnectWithAI = useCallback(() => {
-    // AI simulation: connect ideas of same category or related keywords
-    const newIdeas = [...ideas];
+    setTimeout(() => {
+      const handler = AI_RESPONSES[actionKey];
+      if (!handler) { setAiProcessingId(null); return; }
+      const results = handler(source.text);
 
-    newIdeas.forEach((idea, idx) => {
-      newIdeas.forEach((otherIdea, otherIdx) => {
-        if (idx !== otherIdx && !idea.connections.includes(otherIdea.id)) {
-          // Connect if same category or keywords match
-          const sameCategory = idea.category === otherIdea.category;
-          const hasCommonWords = idea.text.toLowerCase().split(' ').some(word =>
-            word.length > 4 && otherIdea.text.toLowerCase().includes(word)
-          );
-
-          if (sameCategory || hasCommonWords) {
-            if (Math.random() > 0.5) { // Some randomness
-              idea.connections.push(otherIdea.id);
-            }
-          }
-        }
+      const newIdeas: Idea[] = results.map((r, idx) => {
+        const angle = ((2 * Math.PI) / results.length) * idx - Math.PI / 2;
+        return {
+          id: `${Date.now()}-ai-${idx}`,
+          text: r.text,
+          category: r.category,
+          position: {
+            x: source.position.x + Math.cos(angle) * 300,
+            y: source.position.y + Math.sin(angle) * 280
+          },
+          connections: [],
+          isCentral: false,
+          scale: 1,
+          aiGenerated: true,
+          projectId: activeProjectId
+        };
       });
-    });
 
-    setIdeas(newIdeas);
-  }, [ideas]);
-
-  // ─── AI Action Handler (Motor de Criação) ───────────────────────────
-  const handleAiAction = useCallback(
-    (ideaId: string, actionKey: string) => {
-      const sourceIdea = ideas.find(i => i.id === ideaId);
-      if (!sourceIdea) return;
-
-      setAiProcessingId(ideaId);
-
-      // Simulate AI processing delay (1.5 – 3s)
-      const delay = 1500 + Math.random() * 1500;
-
-      setTimeout(() => {
-        const aiResults = generateAIResponse(sourceIdea.text, actionKey);
-        const newIdeas: Idea[] = [];
-        const angleStep = (2 * Math.PI) / aiResults.length;
-        const radius = 280;
-
-        aiResults.forEach((result, idx) => {
-          const angle = angleStep * idx - Math.PI / 2; // Start from top
-          const newIdea: Idea = {
-            id: `${Date.now()}-ai-${idx}`,
-            text: result.text,
-            category: result.category,
-            position: {
-              x: sourceIdea.position.x + Math.cos(angle) * radius,
-              y: sourceIdea.position.y + Math.sin(angle) * radius
-            },
-            connections: [],
-            isCentral: false,
-            scale: 0.9,
-            aiGenerated: true
-          };
-          newIdeas.push(newIdea);
+      setIdeas(prev => {
+        const updated = [...prev];
+        const srcIdx = updated.findIndex(i => i.id === ideaId);
+        if (srcIdx === -1) return prev;
+        newIdeas.forEach(ni => {
+          updated.push(ni);
+          updated[srcIdx] = { ...updated[srcIdx], connections: [...updated[srcIdx].connections, ni.id] };
         });
+        return updated;
+      });
 
-        // Add new ideas and connect them, firing synapse animations sequentially
-        setIdeas(prev => {
-          const updated = [...prev];
-          const sourceIndex = updated.findIndex(i => i.id === ideaId);
+      newIdeas.forEach((ni, idx) => {
+        setTimeout(() => triggerFlash(ideaId, ni.id), idx * 350);
+      });
+      setAiProcessingId(null);
+    }, delay);
+  }, [ideas, activeProjectId, triggerFlash]);
 
-          if (sourceIndex === -1) return prev;
+  // ── Viewport controls ──
+  const handleZoomChange = useCallback((z: number) => setZoom(z), []);
+  const handlePanChange = useCallback((x: number, y: number) => { setPanX(x); setPanY(y); }, []);
 
-          newIdeas.forEach(newIdea => {
-            updated.push(newIdea);
-            // Add connection from source to new idea
-            updated[sourceIndex] = {
-              ...updated[sourceIndex],
-              connections: [...updated[sourceIndex].connections, newIdea.id]
-            };
-          });
+  const zoomIn = () => setZoom(z => Math.min(3, z * 1.15));
+  const zoomOut = () => setZoom(z => Math.max(0.2, z / 1.15));
+  const resetView = () => { setZoom(1); setPanX(0); setPanY(0); };
 
-          return updated;
-        });
-
-        // Fire synapse animations sequentially for each new connection
-        newIdeas.forEach((newIdea, idx) => {
-          setTimeout(() => {
-            triggerConnectionFlash(ideaId, newIdea.id);
-          }, idx * 400);
-        });
-
-        setAiProcessingId(null);
-      }, delay);
-    },
-    [ideas, triggerConnectionFlash]
-  );
+  const fitView = () => {
+    const visible = filteredIdeas;
+    if (!visible.length) return;
+    const board = boardRef.current;
+    if (!board) return;
+    const { width: bw, height: bh } = board.getBoundingClientRect();
+    const minX = Math.min(...visible.map(i => i.position.x));
+    const maxX = Math.max(...visible.map(i => i.position.x + 220));
+    const minY = Math.min(...visible.map(i => i.position.y));
+    const maxY = Math.max(...visible.map(i => i.position.y + 90));
+    const w = maxX - minX + 100;
+    const h = maxY - minY + 100;
+    const newZoom = Math.min(2, Math.min(bw / w, bh / h));
+    const newPanX = (bw - w * newZoom) / 2 - (minX - 50) * newZoom;
+    const newPanY = (bh - h * newZoom) / 2 - (minY - 50) * newZoom;
+    setZoom(newZoom);
+    setPanX(newPanX);
+    setPanY(newPanY);
+  };
 
   const clearAll = useCallback(() => {
-    if (confirm('Tem certeza que deseja limpar todas as ideias?')) {
-      setIdeas([]);
+    if (confirm('Limpar todos os balões do projeto atual?')) {
+      setIdeas(prev => prev.filter(i => i.projectId !== activeProjectId));
       resetAnimatedConnections();
     }
-  }, []);
+  }, [activeProjectId]);
 
-  const filteredIdeas = selectedCategory
-    ? ideas.filter(idea => idea.category === selectedCategory)
-    : ideas;
+  // Filter by active project AND selected category
+  const filteredIdeas = ideas.filter(i => {
+    const inProject = i.projectId === activeProjectId;
+    const inCategory = !selectedCategory || i.category === selectedCategory;
+    return inProject && inCategory;
+  });
+
+  const projectIdeas = ideas.filter(i => i.projectId === activeProjectId);
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="size-full flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        {/* Header */}
-        <div className="flex-none px-6 py-4 bg-slate-900/50 border-b border-slate-700/50 shadow-sm backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-100">
-              Organizador de Brainstorm Neural
-            </h1>
+    <div
+      className="flex"
+      style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#080c14' }}
+    >
+      {/* Sidebar */}
+      <Sidebar
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelectProject={setActiveProjectId}
+        onAddProject={addProject}
+        onDeleteProject={deleteProject}
+        categories={CATEGORIES}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        ideaCount={projectIdeas.length}
+        zoom={zoom}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetView={resetView}
+        onFitView={fitView}
+        aiMode={aiMode}
+        onToggleAiMode={() => setAiMode(v => !v)}
+      />
 
-            <div className="flex items-center gap-3">
-              {/* AI Toggle */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                <span className="text-xs font-medium text-slate-300">Modo IA</span>
-                <button
-                  onClick={() => {
-                    setAiMode(!aiMode);
-                    if (!aiMode) autoConnectWithAI();
-                  }}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${
-                    aiMode ? 'bg-purple-600' : 'bg-slate-700'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 left-0.5 size-5 bg-white rounded-full transition-transform ${
-                      aiMode ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Zoom Controls */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                <button
-                  onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                  className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded transition-colors"
-                >
-                  -
-                </button>
-                <span className="text-xs font-medium text-slate-300 min-w-[3rem] text-center">
-                  {Math.round(zoom * 100)}%
-                </span>
-                <button
-                  onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                  className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded transition-colors"
-                >
-                  +
-                </button>
-              </div>
-
-              <button
-                onClick={clearAll}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-red-950/50 rounded-lg transition-colors border border-red-900/50"
-              >
-                <Trash2 size={16} />
-                Limpar Tudo
-              </button>
-            </div>
+      {/* Main area */}
+      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+        {/* Top bar */}
+        <div
+          className="flex-none flex items-center justify-between px-5 py-3"
+          style={{
+            background: 'rgba(8,12,20,0.8)',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(12px)',
+            height: 56
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className="text-sm font-semibold"
+              style={{ color: projects.find(p => p.id === activeProjectId)?.color || '#6366f1' }}
+            >
+              {projects.find(p => p.id === activeProjectId)?.name || 'Projeto'}
+            </span>
+            <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', color: '#475569' }}>
+              {projectIdeas.length} balões
+            </span>
           </div>
 
-          <CategoryFilter
-            categories={CATEGORIES}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            ideas={ideas}
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-[11px]" style={{ color: '#334155' }}>
+              Scroll → pan · Ctrl+Scroll → zoom · Clique na borda → conectar
+            </span>
+            <button
+              onClick={clearAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
+              style={{
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)',
+                color: '#f87171'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.15)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+            >
+              <Trash2 size={13} />
+              Limpar
+            </button>
+          </div>
         </div>
 
         {/* Board */}
-        <div className="flex-1 overflow-hidden">
+        <div ref={boardRef} className="flex-1" style={{ position: 'relative', overflow: 'hidden' }}>
           <BrainstormBoard
             ideas={filteredIdeas}
             categories={CATEGORIES}
@@ -423,30 +426,32 @@ export default function App() {
             onToggleCentral={toggleCentral}
             onUpdateScale={updateIdeaScale}
             connectingFrom={connectingFrom}
+            connectingLine={connectingLine}
             onStartConnecting={startConnecting}
             onFinishConnecting={finishConnecting}
-            zoom={zoom}
             connectionFlash={connectionFlash}
             onAiAction={handleAiAction}
             aiProcessingId={aiProcessingId}
+            zoom={zoom}
+            panX={panX}
+            panY={panY}
+            onZoomChange={handleZoomChange}
+            onPanChange={handlePanChange}
           />
         </div>
 
-        {/* Bottom Input Bar */}
-        <div className="flex-none px-6 py-4 bg-slate-900/50 border-t border-slate-700/50 backdrop-blur-sm">
+        {/* Bottom input bar */}
+        <div
+          className="flex-none px-5 py-3"
+          style={{
+            background: 'rgba(8,12,20,0.9)',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(12px)'
+          }}
+        >
           <InputBar onAddIdea={addIdea} />
-          <div className="flex items-center gap-4 text-xs text-slate-500 mt-3">
-            <span className="font-semibold">Dica:</span>
-            <span>Arraste os balões</span>
-            <span>•</span>
-            <span>Arraste da borda para conectar</span>
-            <span>•</span>
-            <span>Use o 🧠 para ações de IA</span>
-            <span>•</span>
-            <span>Total: {ideas.length}</span>
-          </div>
         </div>
       </div>
-    </DndProvider>
+    </div>
   );
 }

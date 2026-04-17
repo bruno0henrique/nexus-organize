@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react';
-import { Plus, Star } from 'lucide-react';
+import { useState, FormEvent, useRef, useEffect } from 'react';
+import { Plus, Star, Wand2 } from 'lucide-react';
 
 interface InputBarProps {
   onAddIdea: (text: string, isCentral?: boolean) => void;
@@ -8,42 +8,72 @@ interface InputBarProps {
 export function InputBar({ onAddIdea }: InputBarProps) {
   const [input, setInput] = useState('');
   const [isCentral, setIsCentral] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (input.trim()) {
-      onAddIdea(input, isCentral);
+      onAddIdea(input.trim(), isCentral);
       setInput('');
       setIsCentral(false);
+      inputRef.current?.focus();
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      {/* Central toggle */}
       <button
         type="button"
-        onClick={() => setIsCentral(!isCentral)}
-        className={`px-3 py-2 rounded-lg transition-all border ${
-          isCentral
-            ? 'bg-amber-600 border-amber-500 text-white'
-            : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-amber-400'
-        }`}
+        onClick={() => setIsCentral(v => !v)}
+        className="flex-shrink-0 flex items-center justify-center rounded-xl transition-all"
+        style={{
+          width: 42,
+          height: 42,
+          background: isCentral
+            ? 'linear-gradient(135deg, #d97706, #b45309)'
+            : 'rgba(255,255,255,0.05)',
+          boxShadow: isCentral ? '0 0 16px rgba(245,158,11,0.4)' : 'none',
+          border: isCentral ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.08)',
+          color: isCentral ? 'white' : '#64748b'
+        }}
         title="Marcar como ideia central"
       >
-        <Star size={20} fill={isCentral ? 'currentColor' : 'none'} />
+        <Star size={16} fill={isCentral ? 'currentColor' : 'none'} />
       </button>
+
+      {/* Text input */}
       <input
+        ref={inputRef}
         type="text"
         value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Digite uma ideia e pressione Enter..."
-        className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-slate-100 placeholder-slate-500"
+        onChange={e => setInput(e.target.value)}
+        placeholder="Nova ideia... pressione Enter para adicionar"
+        className="flex-1 px-4 py-2.5 text-sm outline-none rounded-xl"
+        style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          color: '#e2e8f0',
+          caretColor: '#6366f1'
+        }}
+        onFocus={e => (e.target.style.border = '1px solid rgba(99,102,241,0.5)')}
+        onBlur={e => (e.target.style.border = '1px solid rgba(255,255,255,0.08)')}
       />
+
+      {/* Submit */}
       <button
         type="submit"
-        className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex-shrink-0"
+        style={{
+          background: input.trim()
+            ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+            : 'rgba(255,255,255,0.05)',
+          color: input.trim() ? 'white' : '#64748b',
+          boxShadow: input.trim() ? '0 4px 16px rgba(99,102,241,0.4)' : 'none',
+          border: '1px solid rgba(255,255,255,0.08)'
+        }}
       >
-        <Plus size={20} />
+        <Plus size={16} />
         Adicionar
       </button>
     </form>
