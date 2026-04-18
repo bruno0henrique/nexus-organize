@@ -94,8 +94,8 @@ export function Sidebar({
             <Network size={24} className="text-white" />
           </div>
           <div>
-            <div className="text-xl font-bold text-white tracking-tight">Nexus</div>
-            <div className="text-xs text-slate-500 font-medium tracking-widest uppercase">Organize</div>
+            <div className="text-xl font-bold text-white tracking-tight">Think</div>
+            <div className="text-xs text-slate-500 font-medium tracking-widest uppercase">Flow</div>
           </div>
         </div>
       </div>
