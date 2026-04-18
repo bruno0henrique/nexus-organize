@@ -41,7 +41,6 @@ export function CategoryFilter({ categories, selectedCategory, onSelectCategory,
               color: selectedCategory === category.name ? 'white' : category.color,
               borderColor: category.color,
               borderWidth: '1px',
-              ringColor: selectedCategory === category.name ? category.color : 'transparent'
             }}
           >
             {category.name} ({count})

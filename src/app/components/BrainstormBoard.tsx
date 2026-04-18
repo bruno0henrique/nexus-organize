@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, ReactNode } from 'react';
 import { IdeaBalloon } from './IdeaBalloon';
 import { Idea } from '../App';
 
@@ -30,9 +30,9 @@ export function resetAnimatedConnections() {
   animatedConnections = new Set<string>();
 }
 
-// Fixed balloon dimensions (no dynamic scaling per balloon anymore — cleaner)
-const BALLOON_W = 360;
-const BALLOON_H = 140; // minimum height; text will grow it
+// Fixed balloon dimensions
+const BALLOON_W = 460;
+const BALLOON_H = 180;
 
 export function BrainstormBoard({
   ideas,
@@ -161,7 +161,7 @@ export function BrainstormBoard({
 
   // ── Draw connections ───────────────────────────────────────────────
   const drawConnections = () => {
-    const els: JSX.Element[] = [];
+    const els: ReactNode[] = [];
 
     ideas.forEach((idea, iIdx) => {
       idea.connections.forEach((connId, cIdx) => {
@@ -256,15 +256,15 @@ export function BrainstormBoard({
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden"
-      style={{ flex: 1, background: '#080c14', cursor: 'default' }}
+      className="relative overflow-hidden w-full h-full"
+      style={{ background: '#080c14', cursor: 'default' }}
     >
       {/* Background grid */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.06) 2px, transparent 2px)`,
-          backgroundSize: '32px 32px',
+          backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) 1.5px, transparent 1.5px)`,
+          backgroundSize: '24px 24px',
           backgroundPosition: `${gridDotX}px ${gridDotY}px`
         }}
       />
@@ -346,11 +346,11 @@ export function BrainstormBoard({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
             <div className="text-[120px] leading-none mb-8 select-none" style={{ filter: 'drop-shadow(0 0 48px rgba(139,92,246,0.3))' }}>🧠</div>
-            <h2 className="text-2xl font-bold mb-3 tracking-tight" style={{ color: '#94a3b8' }}>
-              Workspace em branco
+            <h2 className="text-2xl font-bold mb-3 tracking-tight" style={{ color: '#e2e8f0' }}>
+              Comece seu brainstorm neural
             </h2>
-            <p className="text-base font-medium" style={{ color: '#475569' }}>
-              Digite uma ideia abaixo e pressione Enter
+            <p className="text-base font-medium" style={{ color: '#64748b' }}>
+              Adicione ideias no campo abaixo para começar
             </p>
           </div>
         </div>

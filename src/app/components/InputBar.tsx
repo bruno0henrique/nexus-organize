@@ -1,5 +1,5 @@
-import { useState, FormEvent, useRef, useEffect } from 'react';
-import { Plus, Star, Wand2 } from 'lucide-react';
+import { useState, FormEvent, useRef } from 'react';
+import { Plus, Star } from 'lucide-react';
 
 interface InputBarProps {
   onAddIdea: (text: string, isCentral?: boolean) => void;
@@ -21,15 +21,15 @@ export function InputBar({ onAddIdea }: InputBarProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-3">
+    <form onSubmit={handleSubmit} className="flex items-center gap-6">
       {/* Central toggle */}
       <button
         type="button"
         onClick={() => setIsCentral(v => !v)}
-        className="flex-shrink-0 flex items-center justify-center rounded-xl transition-all"
+        className="flex-shrink-0 flex items-center justify-center rounded-2xl transition-all"
         style={{
-          width: 52,
-          height: 52,
+          width: 64,
+          height: 64,
           background: isCentral
             ? 'linear-gradient(135deg, #d97706, #b45309)'
             : 'rgba(255,255,255,0.05)',
@@ -49,7 +49,7 @@ export function InputBar({ onAddIdea }: InputBarProps) {
         value={input}
         onChange={e => setInput(e.target.value)}
         placeholder="Nova ideia... pressione Enter para adicionar"
-        className="flex-1 px-6 py-4 text-base outline-none rounded-xl"
+        className="flex-1 px-8 py-5 text-xl outline-none rounded-2xl"
         style={{
           background: 'rgba(255,255,255,0.05)',
           border: '1px solid rgba(255,255,255,0.08)',
@@ -63,7 +63,7 @@ export function InputBar({ onAddIdea }: InputBarProps) {
       {/* Submit */}
       <button
         type="submit"
-        className="flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold transition-all flex-shrink-0"
+        className="flex items-center gap-3 px-10 py-5 rounded-2xl text-xl font-bold transition-all flex-shrink-0"
         style={{
           background: input.trim()
             ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'

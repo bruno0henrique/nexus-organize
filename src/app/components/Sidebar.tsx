@@ -5,12 +5,9 @@ import {
   FolderOpen,
   Trash2,
   Brain,
-  ChevronRight,
   Sparkles,
   Network,
   Layers,
-  Settings,
-  Search,
   ZoomIn,
   ZoomOut,
   ScanSearch,
@@ -43,11 +40,6 @@ interface SidebarProps {
   onToggleAiMode: () => void;
 }
 
-const PROJECT_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#06b6d4',
-  '#10b981', '#f59e0b', '#ef4444', '#3b82f6'
-];
-
 export function Sidebar({
   projects,
   activeProjectId,
@@ -77,9 +69,6 @@ export function Sidebar({
       setIsAddingProject(false);
     }
   };
-
-  const randomColor = () =>
-    PROJECT_COLORS[Math.floor(Math.random() * PROJECT_COLORS.length)];
 
   return (
     <aside

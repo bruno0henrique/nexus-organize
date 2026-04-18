@@ -9,8 +9,7 @@ import {
   Loader2,
   Link2,
   Star,
-  MoreHorizontal,
-  X
+  MoreHorizontal
 } from 'lucide-react';
 import { Idea } from '../App';
 
@@ -44,7 +43,6 @@ export function IdeaBalloon({
   onUpdatePosition,
   onUpdateCategory,
   onToggleCentral,
-  onUpdateScale,
   onDelete,
   isConnecting,
   connectingFromAny,
@@ -215,9 +213,9 @@ export function IdeaBalloon({
         )}
 
         {/* Content */}
-        <div className="px-6 pt-7 pb-5">
+        <div className="px-8 pt-10 pb-6">
           <p
-            className="text-[17px] leading-relaxed font-medium"
+            className="text-[22px] leading-relaxed font-semibold"
             style={{
               color: '#e2e8f0',
               wordBreak: 'break-word',
@@ -229,16 +227,16 @@ export function IdeaBalloon({
           </p>
 
           {idea.aiGenerated && (
-            <div className="flex items-center gap-1.5 mt-3">
-              <Sparkles size={13} style={{ color: '#a855f7' }} />
-              <span className="text-[11px] font-bold" style={{ color: '#a855f7' }}>GERADO POR IA</span>
+            <div className="flex items-center gap-2 mt-4">
+              <Sparkles size={16} style={{ color: '#a855f7' }} />
+              <span className="text-[13px] font-bold" style={{ color: '#a855f7' }}>GERADO POR IA</span>
             </div>
           )}
         </div>
 
-        {/* Action toolbar — always rendered but opacity toggles */}
+        {/* Action toolbar */}
         <div
-          className="flex items-center gap-1.5 px-4 pb-4 transition-all duration-150"
+          className="flex items-center gap-3 px-6 pb-6 transition-all duration-150"
           style={{ opacity: isHovered || isConnecting ? 1 : 0 }}
         >
           {/* Connect port */}
@@ -248,33 +246,33 @@ export function IdeaBalloon({
               if (isConnecting) onFinishConnecting(idea.id);
               else onStartConnecting(idea.id);
             }}
-            className="flex items-center justify-center rounded-lg transition-all"
+            className="flex items-center justify-center rounded-xl transition-all"
             style={{
-              width: 32,
-              height: 32,
+              width: 44,
+              height: 44,
               background: isConnecting ? '#7c3aed' : 'rgba(255,255,255,0.05)',
               color: isConnecting ? 'white' : '#64748b',
               border: isConnecting ? '1px solid #9333ea' : '1px solid rgba(255,255,255,0.08)'
             }}
             title={isConnecting ? 'Cancelar conexão' : 'Conectar a outro balão'}
           >
-            <Link2 size={16} />
+            <Link2 size={22} />
           </button>
 
           {/* Star toggle */}
           <button
             onClick={e => { e.stopPropagation(); onToggleCentral(idea.id); }}
-            className="flex items-center justify-center rounded-lg transition-all"
+            className="flex items-center justify-center rounded-xl transition-all"
             style={{
-              width: 32,
-              height: 32,
+              width: 44,
+              height: 44,
               background: idea.isCentral ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
               color: idea.isCentral ? '#f59e0b' : '#64748b',
               border: '1px solid rgba(255,255,255,0.08)'
             }}
             title="Central"
           >
-            <Star size={16} fill={idea.isCentral ? 'currentColor' : 'none'} />
+            <Star size={22} fill={idea.isCentral ? 'currentColor' : 'none'} />
           </button>
 
           {/* AI actions */}
@@ -282,17 +280,17 @@ export function IdeaBalloon({
             <button
               onClick={e => { e.stopPropagation(); setShowAiMenu(v => !v); setShowCatMenu(false); }}
               disabled={isAiProcessing}
-              className="flex items-center justify-center rounded-lg transition-all"
+              className="flex items-center justify-center rounded-xl transition-all"
               style={{
-                width: 32,
-                height: 32,
+                width: 44,
+                height: 44,
                 background: showAiMenu ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.05)',
                 color: isAiProcessing ? '#7c3aed' : showAiMenu ? '#c4b5fd' : '#64748b',
                 border: showAiMenu ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(255,255,255,0.08)'
               }}
               title="Ações de IA"
             >
-              {isAiProcessing ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
+              {isAiProcessing ? <Loader2 size={22} className="animate-spin" /> : <Brain size={22} />}
             </button>
 
             {showAiMenu && !isAiProcessing && (
@@ -343,17 +341,17 @@ export function IdeaBalloon({
           <div className="relative">
             <button
               onClick={e => { e.stopPropagation(); setShowCatMenu(v => !v); setShowAiMenu(false); }}
-              className="flex items-center justify-center rounded-lg transition-all"
+              className="flex items-center justify-center rounded-xl transition-all"
               style={{
-                width: 32,
-                height: 32,
+                width: 44,
+                height: 44,
                 background: 'rgba(255,255,255,0.05)',
                 color: '#64748b',
                 border: '1px solid rgba(255,255,255,0.08)'
               }}
               title="Mudar categoria"
             >
-              <MoreHorizontal size={16} />
+              <MoreHorizontal size={22} />
             </button>
 
             {showCatMenu && (
@@ -395,10 +393,10 @@ export function IdeaBalloon({
           {/* Delete */}
           <button
             onClick={e => { e.stopPropagation(); onDelete(idea.id); }}
-            className="ml-auto flex items-center justify-center rounded-lg transition-all"
+            className="ml-auto flex items-center justify-center rounded-xl transition-all"
             style={{
-              width: 32,
-              height: 32,
+              width: 44,
+              height: 44,
               background: 'rgba(255,255,255,0.05)',
               color: '#64748b',
               border: '1px solid rgba(255,255,255,0.08)'
@@ -407,7 +405,7 @@ export function IdeaBalloon({
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.15)'; (e.currentTarget as HTMLElement).style.color = '#ef4444'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.color = '#64748b'; }}
           >
-            <Trash2 size={16} />
+            <Trash2 size={22} />
           </button>
         </div>
       </div>
